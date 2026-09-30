@@ -13,8 +13,10 @@ typedef struct block_header {
   size_t size;
   int free;
   struct block_header *next;
+  struct block_header *prev;
 } block_header_t;
 
 extern void *heap_start;
+extern void *heap_tail;
 
 #endif

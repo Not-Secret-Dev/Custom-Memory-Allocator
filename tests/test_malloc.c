@@ -106,6 +106,76 @@ void test_null_handling() {
   PASS();
 }
 
+void test_realloc_null() {
+  TEST("realloc(NULL, n) acts as malloc");
+  int *p = (int *)my_realloc(NULL, sizeof(int));
+  if (p == NULL) {
+    FAIL("returned NULL");
+    return;
+  }
+  *p = 99;
+  if (*p != 99) {
+    FAIL("value mismatch");
+    return;
+  }
+  my_free(p);
+  PASS();
+}
+
+void test_realloc_zero() {
+  TEST("realloc(ptr, 0) acts as free");
+  char *p = (char *)my_malloc(32);
+  void *result = my_realloc(p, 0);
+  if (result != NULL) {
+    FAIL("should return NULL");
+    return;
+  }
+  PASS();
+}
+
+void test_realloc_grow_in_place() {
+  TEST("realloc grows without moving when possible");
+  char *p = (char *)my_malloc(16);
+  char *original = p;
+  p = (char *)my_realloc(p, 32);
+  if (p != original) {
+    FAIL("pointer moved unnecessarily");
+    return;
+  }
+  my_free(p);
+  PASS();
+}
+
+void test_realloc_shrink() {
+  TEST("realloc shrinks correctly");
+  char *p = (char *)my_malloc(100);
+  p = (char *)my_realloc(p, 16);
+  if (p == NULL) {
+    FAIL("returned NULL");
+    return;
+  }
+  my_free(p);
+  PASS();
+}
+
+void test_realloc_preserves_data() {
+  TEST("realloc preserves data on move");
+  char *p = (char *)my_malloc(8);
+  strcpy(p, "HELLO");
+  // Force a move by allocating something between p and next free space
+  char *blocker = (char *)my_malloc(8);
+  p = (char *)my_realloc(p, 256);
+  if (strcmp(p, "HELLO") != 0) {
+    FAIL("data corrupted");
+    my_free(p);
+    my_free(blocker);
+    return;
+  }
+  my_free(p);
+  my_free(blocker);
+  PASS();
+}
+
 int main() {
   printf("\n=== Custom Malloc Test Suite ===\n\n");
 
@@ -115,6 +185,11 @@ int main() {
   test_coalescing();
   test_splitting();
   test_null_handling();
+  test_realloc_null();
+  test_realloc_grow_in_place();
+  test_realloc_preserves_data();
+  test_realloc_shrink();
+  test_realloc_zero();
 
   printf("\n--- Results: %d passed, %d failed ---\n\n", tests_passed,
          tests_failed);
